@@ -7,7 +7,7 @@ namespace Search;
 public interface ISolution
 {
     /// <summary>
-    /// Indicates whether this <see cref="ISolution"/>  cannot be found or infeasible.
+    /// Indicates whether this <see cref="ISolution"/>  cannot be found or is infeasible.
     /// </summary>
     public bool IsFailure { get; }
     /// <summary>

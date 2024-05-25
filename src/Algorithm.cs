@@ -9,7 +9,7 @@ public interface IAlgorithm
     /// <summary>
     /// Searchs for an <see cref="ISolution"/> to the problem initiating at the specified <paramref name="state"/>.
     /// </summary>
-    /// <param name="state">The initial <see cref="IState"/> of the problem being solved..</param>
+    /// <param name="state">The initial <see cref="IState"/> of the problem being solved.</param>
     /// <returns>An <see cref="ISolution"/> to the problem initiating at the specfied <paramref
     /// name="state"/>.</returns>
     /// <exception cref="OutOfMemoryException">If the search for an <see cref="ISolution"/> exhausts its runtime
