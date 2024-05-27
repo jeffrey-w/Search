@@ -20,13 +20,13 @@ internal sealed class Solution : ISolution
 {
     public static ISolution Failure = new Solution([]);
 
-    public static ISolution Success<TState>(Algorithm.BaseSolver<TState>.Node node) where TState : IState
+    public static ISolution Success<TState>(Algorithm.BaseSolver<TState>.Node? node) where TState : IState
     {
-        var states = new Stack<IState>([node.State]);
-        while (node.Parent is not null)
+        var states = new Stack<IState>();
+        while (node is not null)
         {
-            node = node.Parent;
             states.Push(node.State);
+            node = node.Parent;
         }
         return new Solution(states);
     }
