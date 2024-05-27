@@ -34,7 +34,7 @@ public sealed class Action : IAction
 
     /// <inheritdoc/> 
     public int Cost { get; }
-    /// <inheritdoc/>
+    /// <inheritdoc/> 
     public IState Successor { get; }
 
     private Action(int cost, IState successor)

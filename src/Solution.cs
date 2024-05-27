@@ -20,7 +20,7 @@ internal sealed class Solution : ISolution
 {
     public static ISolution Failure = new Solution([]);
 
-    public static ISolution Success(BaseAlgorithm.Node node)
+    public static ISolution Success<TState>(Algorithm.BaseSolver<TState>.Node node) where TState : IState
     {
         var states = new Stack<IState>([node.State]);
         while (node.Parent is not null)

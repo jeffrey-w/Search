@@ -11,24 +11,19 @@ public interface IState
     /// </summary>
     public bool IsGoal { get; }
     /// <summary>
-    /// The degree to which this <c>IState</c> constitutes progress towards an <see cref="ISolution"/>.
-    /// </summary>
-    public int Fitness { get; }
-    /// <summary>
     /// The <see cref="IAction"/>s executable from this <c>IState</c> to transition to neighboring <c>IState</c>s.
     /// </summary>
     public IEnumerable<IAction> Actions { get; }
 }
 
-internal sealed class DummyState : IState
+/// <summary>
+/// The <c>IHeuristicState</c> interface provides properties on an <see cref="IState"/> for which evaluative information
+/// may be obtained.
+/// </summary>
+public interface IHeuristicState : IState
 {
-    public static IState Instance = new DummyState();
-
-    public bool IsGoal => throw new NotImplementedException();
-    public int Fitness => throw new NotImplementedException();
-    public IEnumerable<IAction> Actions => throw new NotImplementedException();
-
-    private DummyState()
-    {
-    }
+    /// <summary>
+    /// The degree to which this <c>IState</c> constitutes progress towards an <see cref="ISolution"/>.
+    /// </summary>
+    public int Fitness { get; }
 }
