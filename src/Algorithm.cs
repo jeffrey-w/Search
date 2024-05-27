@@ -187,7 +187,7 @@ public static class Algorithm
     /// </summary>
     public static readonly IAlgorithm<IState> DepthFirstSearch = new AlgorithmImpl<IState>(() => new DepthFirstSolver());
     /// <summary>
-    /// Provides Djikstra's search algorithm over <see cref="IState"/>s.
+    /// Provides Dijkstra's search algorithm over <see cref="IState"/>s.
     /// </summary>
     public static readonly IAlgorithm<IState> UniformCostSearch = new AlgorithmImpl<IState>(() => new UniformCostSolver());
     /// <summary>
