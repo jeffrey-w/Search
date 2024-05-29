@@ -81,7 +81,8 @@ public static class Algorithm
                 }
                 foreach (var action in node.State.Actions)
                 {
-                    if (TryGetChild(node, action, out var child))
+                    var child = node.MakeChild(action);
+                    if (IsToVisit(child))
                     {
                         frontier.Enqueue(child, Evaluate(child));
                     }
@@ -91,39 +92,23 @@ public static class Algorithm
         }
 
         protected abstract int Evaluate(Node node);
-        protected abstract bool TryGetChild(Node node, IAction action, out Node child);
+        protected abstract bool IsToVisit(Node node);
 
     }
 
     private abstract class Solver : BaseSolver<IState>
     {
-        protected override bool TryGetChild(Node node, IAction action, out Node child)
+        protected override bool IsToVisit(Node node)
         {
-            child = node.MakeChild(action);
-            if (visited.ContainsKey(child.State))
-            {
-                return false;
-            }
-            visited[child.State] = child;
-            return true;
+            return !visited.ContainsKey(node.State);
         }
     }
 
-    private abstract class HeuristicSolver : BaseSolver<IHeuristicState>
+    private abstract class CostSensitiveSolver<TState> : BaseSolver<TState> where TState : IState
     {
-        protected override bool TryGetChild(Node node, IAction action, out Node child)
+        protected override bool IsToVisit(Node node)
         {
-            if (IsToVisit(child = node.MakeChild(action)))
-            {
-                visited[child.State] = child;
-                return true;
-            }
-            return false;
-        }
-
-        private bool IsToVisit(Node child)
-        {
-            return !visited.TryGetValue(child.State, out var other) || child.Cost < other.Cost;
+            return !visited.TryGetValue(node.State, out var other) || node.Cost < other.Cost;
         }
     }
 
@@ -143,7 +128,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class UniformCostSolver : Solver
+    private sealed class UniformCostSolver : CostSensitiveSolver<IState>
     {
         protected override int Evaluate(Node node)
         {
@@ -151,7 +136,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class GreedySolver : HeuristicSolver
+    private sealed class GreedySolver : CostSensitiveSolver<IHeuristicState>
     {
         protected override int Evaluate(Node node)
         {
@@ -159,7 +144,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class AStarSolver : HeuristicSolver
+    private sealed class AStarSolver : CostSensitiveSolver<IHeuristicState>
     {
         protected override int Evaluate(Node node)
         {
