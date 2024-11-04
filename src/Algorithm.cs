@@ -2,24 +2,20 @@ namespace Search;
 
 /// <summary>
 /// The <c>IAlgorithm</c> interface provides operations for finding a sequence of <see cref="IState"/>s that constitute
-/// an <see cref="ISolution"/> to a <see cref="Search"/> problem.
+/// an <see cref="ISolution"/> to a <see cref="Search"/> <see cref="IProblem{TState}"/>.
 /// </summary>
 /// <typeparam name="TState">The type of <see cref="IState"/> over which this <c>IAlgorithm</c> provides <see
 /// cref="ISolution"/>s.</typeparam>
 public interface IAlgorithm<TState> where TState : IState
 {
     /// <summary>
-    /// <see cref="Search"/>s for the <see cref="ISolution"/> to the problem initiating at the specified <paramref
-    /// name="state"/>.
+    /// <see cref="Search"/>s for the <see cref="ISolution"/> to the specified <paramref name="problem"/>.
     /// </summary>
-    /// <param name="state">The initial <see cref="IState"/> of the problem being solved.</param>
-    /// <returns>An <see cref="ISolution"/> to the problem initiating at the specfied <paramref
-    /// name="state"/>.</returns>
-    /// <exception cref="InvalidOperationException">If the specified <paramref name="state"/> provides <see
-    /// cref="IAction"/>s that exhibit <see cref="IState">successors</see> of a different type.</exception>
+    /// <param name="problem">The <see cref="IProblem{TState}"/> being solved.</param>
+    /// <returns>An <see cref="ISolution"/> to the specified <paramref name="problem"/>.</returns>
     /// <exception cref="OutOfMemoryException">If the search for an <see cref="ISolution"/> exhausts its runtime
     /// environment's memory.</exception>
-    public ISolution Run(TState state);
+    public ISolution Run(IProblem<TState> problem);
 }
 
 /// <summary>
@@ -50,41 +46,35 @@ public static class Algorithm
                 State = state;
             }
 
-            public Node MakeChild(IAction action)
+            public Node MakeChild(IAction<TState> action)
             {
-                try
-                {
-                    return new Node(this, Depth + 1, Cost + action.Cost, (TState)action.Successor);
-                }
-                catch (InvalidCastException e)
-                {
-                    throw new InvalidOperationException(string.Empty, e);
-                }
+                return new Node(this, Depth + 1, Cost + action.Cost, action.Successor);
             }
         }
 
-        protected readonly Dictionary<TState, Node> visited = [];
+        protected readonly Dictionary<TState, Node> Visited = [];
 
-        private readonly PriorityQueue<Node, int> frontier = new();
+        private readonly PriorityQueue<Node, int> _frontier = new();
 
-        public ISolution Solve(TState state)
+        public ISolution Solve(IProblem<TState> problem)
         {
-            var root = Node.MakeRoot(state);
-            frontier.Enqueue(root, Evaluate(root));
-            visited.Add(state, root);
-            while (frontier.Count > 0)
+            var root = Node.MakeRoot(problem.Start);
+            _frontier.Enqueue(root, Evaluate(root));
+            Visited.Add(problem.Start, root);
+            while (_frontier.Count > 0)
             {
-                var node = frontier.Dequeue();
+                var node = _frontier.Dequeue();
                 if (node.State.IsGoal)
                 {
                     return Solution.Success(node);
                 }
-                foreach (var action in node.State.Actions)
+                foreach (var action in problem.GetActions(node.State))
                 {
                     var child = node.MakeChild(action);
                     if (IsToVisit(child))
                     {
-                        frontier.Enqueue(child, Evaluate(child));
+                        Visited.Add(child.State, child);
+                        _frontier.Enqueue(child, Evaluate(child));
                     }
                 }
             }
@@ -96,11 +86,11 @@ public static class Algorithm
 
     }
 
-    private abstract class Solver : BaseSolver<IState>
+    private abstract class Solver<TState> : BaseSolver<TState> where TState : IState
     {
         protected override bool IsToVisit(Node node)
         {
-            return !visited.ContainsKey(node.State);
+            return !Visited.ContainsKey(node.State);
         }
     }
 
@@ -108,11 +98,11 @@ public static class Algorithm
     {
         protected override bool IsToVisit(Node node)
         {
-            return !visited.TryGetValue(node.State, out var other) || node.Cost < other.Cost;
+            return !Visited.TryGetValue(node.State, out var other) || node.Cost < other.Cost;
         }
     }
 
-    private sealed class BreadthFirstSolver : Solver
+    private sealed class BreadthFirstSolver<TState> : Solver<TState> where TState : IState
     {
         protected override int Evaluate(Node node)
         {
@@ -120,7 +110,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class DepthFirstSolver : Solver
+    private sealed class DepthFirstSolver<TState> : Solver<TState> where TState : IState
     {
         protected override int Evaluate(Node node)
         {
@@ -128,7 +118,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class UniformCostSolver : CostSensitiveSolver<IState>
+    private sealed class UniformCostSolver<TState> : CostSensitiveSolver<TState> where TState : IState
     {
         protected override int Evaluate(Node node)
         {
@@ -136,7 +126,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class GreedySolver : CostSensitiveSolver<IHeuristicState>
+    private sealed class GreedySolver<TState> : CostSensitiveSolver<TState> where TState : IHeuristicState
     {
         protected override int Evaluate(Node node)
         {
@@ -144,7 +134,7 @@ public static class Algorithm
         }
     }
 
-    private sealed class AStarSolver : CostSensitiveSolver<IHeuristicState>
+    private sealed class AStarSolver<TState> : CostSensitiveSolver<TState> where TState : IHeuristicState
     {
         protected override int Evaluate(Node node)
         {
@@ -154,33 +144,46 @@ public static class Algorithm
 
     private sealed class AlgorithmImpl<TState>(Func<BaseSolver<TState>> factory) : IAlgorithm<TState> where TState : IState
     {
-        private readonly Func<BaseSolver<TState>> factory = factory;
-
-        public ISolution Run(TState state)
+        public ISolution Run(IProblem<TState> problem)
         {
-            return this.factory()
-                       .Solve(state);
+            return factory.Invoke()
+                          .Solve(problem);
         }
     }
 
     /// <summary>
-    /// Provides a breadth-first search over <see cref="IState"/>s.
+    /// Provides a breadth-first search over <typeparamref name="TState"/>s.
     /// </summary>
-    public static readonly IAlgorithm<IState> BreadthFirstSearch = new AlgorithmImpl<IState>(() => new BreadthFirstSolver());
+    /// <typeparam name="TState">The type of <see cref="IState"/> over which the new <see cref="IAlgorithm{TState}"/>
+    /// searches.</typeparam>
+    /// <returns>A new <see cref="IAlgorithm{TState}"/></returns>
+    public static IAlgorithm<TState> BreadthFirstSearch<TState>()where TState : IState => new AlgorithmImpl<TState>(() => new BreadthFirstSolver<TState>());
     /// <summary>
-    /// Provides a depth-first search over <see cref="IState"/>s.
+    /// Provides a depth-first search over <typeparamref name="TState"/>s.
     /// </summary>
-    public static readonly IAlgorithm<IState> DepthFirstSearch = new AlgorithmImpl<IState>(() => new DepthFirstSolver());
+    /// <typeparam name="TState">The type of <see cref="IState"/> over which the new <see cref="IAlgorithm{TState}"/>
+    /// searches.</typeparam>
+    /// <returns>A new <see cref="IAlgorithm{TState}"/></returns>
+    public static IAlgorithm<TState> DepthFirstSearch<TState>() where TState : IState => new AlgorithmImpl<TState>(() => new DepthFirstSolver<TState>());
     /// <summary>
-    /// Provides Dijkstra's search algorithm over <see cref="IState"/>s.
+    /// Provides Dijkstra's search algorithm over <typeparamref name="TState"/>s.
     /// </summary>
-    public static readonly IAlgorithm<IState> UniformCostSearch = new AlgorithmImpl<IState>(() => new UniformCostSolver());
+    /// <typeparam name="TState">The type of <see cref="IState"/> over which the new <see cref="IAlgorithm{TState}"/>
+    /// searches.</typeparam>
+    /// <returns>A new <see cref="IAlgorithm{TState}"/></returns>
+    public static IAlgorithm<TState> UniformCostSearch<TState>() where TState : IState => new AlgorithmImpl<TState>(() => new UniformCostSolver<TState>());
     /// <summary>
-    /// Provides a greedy best-first search over <see cref="IHeuristicState"/>s.
+    /// Provides a greedy best-first search over <typeparamref name="TState"/>s.
     /// </summary>
-    public static readonly IAlgorithm<IHeuristicState> GreedySearch = new AlgorithmImpl<IHeuristicState>(() => new GreedySolver());
+    /// <typeparam name="TState">The type of <see cref="IState"/> over which the new <see cref="IAlgorithm{TState}"/>
+    /// searches.</typeparam>
+    /// <returns>A new <see cref="IAlgorithm{TState}"/></returns>
+    public static IAlgorithm<TState> GreedySearch<TState>() where TState : IHeuristicState => new AlgorithmImpl<TState>(() => new GreedySolver<TState>());
     /// <summary>
-    /// Provides an A* search over <see cref="IHeuristicState"/>s.
+    /// Provides an A* search over <typeparamref name="TState"/>s.
     /// </summary>
-    public static readonly IAlgorithm<IHeuristicState> AStarSearch = new AlgorithmImpl<IHeuristicState>(() => new AStarSolver());
+    /// <typeparam name="TState">The type of <see cref="IState"/> over which the new <see cref="IAlgorithm{TState}"/>
+    /// searches.</typeparam>
+    /// <returns>A new <see cref="IAlgorithm{TState}"/></returns>
+    public static IAlgorithm<TState> AStarSearch<TState>() where TState : IHeuristicState => new AlgorithmImpl<TState>(() => new AStarSolver<TState>());
 }

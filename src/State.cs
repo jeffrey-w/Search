@@ -1,19 +1,15 @@
 namespace Search;
 
 /// <summary>
-/// The <c>IState</c> interface provides properties on a discrete configuration of the salient features of a search
-/// problem.
+/// The <c>IState</c> interface provides properties on a discrete configuration of the salient features of an <see
+/// cref="IProblem{TState}"/>.
 /// </summary>
 public interface IState
 {
     /// <summary>
-    /// Indicates whether this <c>IState</c> is the terminal of an <see cref="ISolution"/>.
+    /// Indicates whether this <c>IState</c> is an <see cref="ISolution"/> to an <see cref="IProblem{TState}"/>.
     /// </summary>
     public bool IsGoal { get; }
-    /// <summary>
-    /// The <see cref="IAction"/>s executable from this <c>IState</c> to transition to neighboring <c>IState</c>s.
-    /// </summary>
-    public IEnumerable<IAction> Actions { get; }
 }
 
 /// <summary>
